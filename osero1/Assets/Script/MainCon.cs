@@ -7,9 +7,6 @@ using UnityEngine.UI;
 
 public class MainCon : MonoBehaviour
 {
-    [SerializeField] private GameObject piece;
-    [SerializeField] private GameObject show;//置ける場所
-
     private enum turnBW
     {
         Black = 0,
@@ -19,16 +16,18 @@ public class MainCon : MonoBehaviour
     private turnBW turn = turnBW.Black;//どっちのターンか
     private turnBW notTurn = turnBW.White;//ターンじゃない方
 
-    //盤面データ
-    private turnBW[,] board = new turnBW[8, 8];
     //駒データ
+    [SerializeField] private GameObject piece;
+    private turnBW[,] piseBoard = new turnBW[8, 8];
     private GameObject[,] pieceBox = new GameObject[8, 8];
-    //置けるとこ
-    private bool[,] canOver = new bool[8, 8];
-    private GameObject[,] overBox = new GameObject[8, 8]; //置ける場所に設置する赤マーク
 
-    private bool canPut = false;//お互い置ける所があるか
-    private int end = 0;//終わる
+    //置けるとこ
+    [SerializeField] private GameObject show;//置ける場所
+    private bool[,] overBoard = new bool[8, 8];
+    private GameObject[,] overBox = new GameObject[8, 8];
+
+    private bool canPut = false;//置ける所が一か所でもあるか
+    private bool end = false;//お互い置けなければ終わる
 
     //ひっくり返す駒リスト
     List<int> overListX = new List<int>();
@@ -40,7 +39,7 @@ public class MainCon : MonoBehaviour
     private int countB = 0;
     private int countW = 0;
 
-    //ターンの方の色ui
+    //ui
     [SerializeField] private Image CUi;
     [SerializeField] private Image CUi2;
 
@@ -48,85 +47,91 @@ public class MainCon : MonoBehaviour
     [SerializeField] private GameObject risu;
     [SerializeField] private Text risuT;
 
+    //裏返るアニメーションの最中に次に進まないように
+    enum step {
+        free,//駒を置ける時
+        put,//駒を置いた後
+        search,//裏返す駒を調べた後
+        reverse//駒を裏返した後
+    }
+    private step stopCount = step.free;
+
     // Start is called before the first frame update
     void Start()
     {
         //盤面データ初期
-        for (int i = 0; i < 8; i++)
-        {
-            for (int j = 0; j < 8; j++)
-            {
-                if ((i == 3 && j == 4) || (i == 4 && j == 3))
-                { //初期黒
-                    board[i, j] = turnBW.Black;
+        for (int i = 0; i < 8; i++){
+            for (int j = 0; j < 8; j++){
+
+                if ((i == 3 && j == 4) || (i == 4 && j == 3)){ //初期黒
+                    piseBoard[i, j] = turnBW.Black;
                     pieceBox[i, j] = Instantiate(piece, new Vector3(j, 0.07f, -i), Quaternion.Euler(0, 0, 0));
 
                 }
-                else if ((i == 3 && j == 3) || (i == 4 && j == 4))
-                {//初期白
-                    board[i, j] = turnBW.White;
+                else if ((i == 3 && j == 3) || (i == 4 && j == 4)) {//初期白
+                    piseBoard[i, j] = turnBW.White;
                     pieceBox[i, j] = Instantiate(piece, new Vector3(j, 0.07f, -i), Quaternion.Euler(0, 0, 180));
 
                 }
-                else
-                {                      //初期配置以外は空
-                    board[i, j] = turnBW.Not;
+                else{                      //初期配置以外は空
+                    piseBoard[i, j] = turnBW.Not;
                 }
 
             }
         }
 
-        CanOver();
+        CanPut();
 
-        risu.gameObject.SetActive(false);
+        risu.gameObject.SetActive(false);//リザルトを非表示
     }
 
     // Update is called once per frame
     void Update()
     {
-        
-        //置ける場所がないとき
-        if (!canPut)
-        {
-            if (end == 2)
-            {
-                GameEnd();
-            }
-            else
-            {
-                TurnChange();
-                end++;
-            }
-        }
+        if(stopCount == step.free) {
 
-        //駒設置
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
-        if (Physics.Raycast(ray, out hit, 13.0f))
-        {
-            if (Input.GetMouseButtonDown(0))
+            //お互い置ける場所がないときゲームが終わる
+            if (!canPut)
             {
-                int z = (int)hit.transform.position.z * -1;
-                int x = (int)hit.transform.position.x;
+                if (end == false){
+                    TurnChange();
+                    end = true;
+                }
+                else{
+                    GameEnd();
+                }
+            }
 
-                if (canOver[z, x] == true)
-                {//駒が置ける場所だったら
-                    pieceBox[z, x] = Instantiate(piece, new Vector3(hit.transform.position.x, 0.07f, hit.transform.position.z), Quaternion.Euler(0, 0, (int)turn));
-                    board[z, x] = turn;
-                    TurnOver(z, x, true);
-                    end = 0;
-                    TurnChange();//ターン交代
+            //駒設置
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit, 13.0f))
+            {
+                if (Input.GetMouseButtonDown(0))
+                {
+                    int z = (int)hit.transform.position.z * -1;
+                    int x = (int)hit.transform.position.x;
+
+                    if (overBoard[z, x] == true){//駒が置ける場所だったら
+                        stopCount = step.put;//ステップを進める
+                        pieceBox[z, x] = Instantiate(piece, new Vector3(hit.transform.position.x, 0.07f, hit.transform.position.z), Quaternion.Euler(0, 0, (int)turn));
+                        piseBoard[z, x] = turn;
+                        SearchReverse(z, x);
+                        end = false;
+                    }
                 }
             }
         }
-        
+        else if(stopCount == step.reverse) {//裏返るアニメーションが終わったら
+            TurnChange();//ターン交代
+            stopCount = step.free;
+        }
     }
-
 
     //ターン交代
     private void TurnChange()
     {
-        if (turn == turnBW.Black)
+        if (turn == turnBW.Black)//黒から白に
         {
             turn = turnBW.White;
             notTurn = turnBW.Black;
@@ -135,7 +140,7 @@ public class MainCon : MonoBehaviour
             CUi2.GetComponent<Image>().color = new Color(255.0f, 255.0f, 255.0f);
 
         }
-        else if (turn == turnBW.White)
+        else if (turn == turnBW.White)//白から黒に
         {
             turn = turnBW.Black;
             notTurn = turnBW.White;
@@ -144,13 +149,38 @@ public class MainCon : MonoBehaviour
             CUi2.GetComponent<Image>().color = new Color(0.0f, 0.0f, 0.0f, 255.0f);
         }
 
-        CanOver();
         CountPiece();
+        CanPut();
     }
 
-    private void CanOver()
-    {//駒の設置が可能か
-        canOver = new bool[8, 8];
+    //今の駒の数
+    private void CountPiece()
+    {
+        countB = 0;
+        countW = 0;
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 8; j++)
+            {
+                if (piseBoard[i, j] == turnBW.Black)
+                {
+                    countB++;
+                }
+                else if (piseBoard[i, j] == turnBW.White)
+                {
+                    countW++;
+                }
+            }
+        }
+        BUi.text = string.Format("{00:D2}", countB);
+        WUi.text = string.Format("{00:D2}", countW);
+
+    }
+
+    //駒の設置が可能か
+    private void CanPut()
+    {
+        overBoard = new bool[8, 8];
         canPut = false;
 
         foreach (GameObject show in overBox)
@@ -162,15 +192,16 @@ public class MainCon : MonoBehaviour
         {
             for (int j = 0; j < 8; j++)
             {
-                if (board[i, j] == turnBW.Not)
+                if (piseBoard[i, j] == turnBW.Not)//何も置かれてないなら設置可能か調べる
                 {
-                    TurnOver(i, j, false);
+                    SearchReverse(i, j);
                 }
                 else
                 {
-                    canOver[i, j] = false;
+                    overBoard[i, j] = false;
                 }
-                if (canOver[i, j])
+
+                if (overBoard[i, j])//設置可能なら表示する
                 {
                     overBox[i, j] = Instantiate(show, new Vector3(j, 0.07f, -i), Quaternion.Euler(90.0f, 0, 0));
                     canPut = true;
@@ -179,34 +210,12 @@ public class MainCon : MonoBehaviour
         }
     }
 
-    private void CountPiece()
-    { //駒の数
-        countB = 0;
-        countW = 0;
-        for (int i = 0; i < 8; i++)
-        {
-            for (int j = 0; j < 8; j++)
-            {
-                if (board[i, j] == turnBW.Black)
-                {
-                    countB++;
-                }
-                else if (board[i, j] == turnBW.White)
-                {
-                    countW++;
-                }
-            }
-        }
-        BUi.text = string.Format("{00:D2}", countB);
-        WUi.text = string.Format("{00:D2}", countW);
-
-    }
-
-    //置けるか
-    private void TurnOver(int Z, int X, bool over)
+    //置けるか調べるまたは、実際裏返す場所をlistに入れる
+    private void SearchReverse(int Z, int X)
     {
         int[] _X = new int[] { -1, -1, 0, 1, 1,  1,  0, -1 };
         int[] _Z = new int[] {  0,  1, 1, 1, 0, -1, -1, -1 };//石の隣8方向
+
 
         for (int i = 0; i < _X.Length; i++)
         {
@@ -226,31 +235,32 @@ public class MainCon : MonoBehaviour
                 x += _x;
                 z += _z;
 
-                if (x < 0 || 7 < x || z < 0 || 7 < z)
+                if (x < 0 || 7 < x || z < 0 || 7 < z)//ボードを超えたらbreak
                 {
                     break;
                 }
 
-                if (firstF)
+                if (firstF)//最初の隣が相手の色か（一度だけ実行）
                 {
-                    if (board[z, x] != notTurn)
+                    if (piseBoard[z, x] != notTurn)//違うならbreak
                     {
                         break;
                     }
                     firstF = false;
                 }
 
-                if (board[z, x] == notTurn)
+                if (piseBoard[z, x] == notTurn)//相手の色ならlistに入れる
                 {
                     overListX.Add(x);
                     overListZ.Add(z);
 
                 }
-                else if (board[z, x] == turn)
+                else if (piseBoard[z, x] == turn)//自分の色ならここまで裏返る
                 {
-                    canOver[Z, X] = true;
-                    if (over == true){
-                        StartCoroutine(OverPiece(overListX, overListZ));
+                    overBoard[Z, X] = true;
+                    if (stopCount == step.put)//裏返す
+                    {
+                        StartCoroutine(Reverse(overListX, overListZ));
                     }
                     isOver = true;//while抜ける
 
@@ -261,26 +271,28 @@ public class MainCon : MonoBehaviour
                 }
             }
         }
+        if(stopCount == step.put) {//ステップを進める
+            stopCount = step.search;
+        }
 
     }
 
     //裏返す
-    private IEnumerator OverPiece(List<int> listX, List<int> listZ)
+    private IEnumerator Reverse(List<int> listX, List<int> listZ)
     {
         int x, z;
         for (int i = 0; i < listX.Count; i++)
         {
             x = listX[i];
             z = listZ[i];
-            board[z, x] = turn;
-            Debug.Log(turn);
-            //pieceBox[z, x].transform.Rotate(new Vector3(0, 0, 180));
-            StartCoroutine(OverAnimation(z,x));
+            piseBoard[z, x] = turn;
+            StartCoroutine(ReverseAnimation(z,x));
             yield return new WaitForSeconds(0.1f);
         }
     }
 
-    private IEnumerator OverAnimation(int z,int x) {
+    //裏返すアニメーション
+    private IEnumerator ReverseAnimation(int z,int x) {
         while(pieceBox[z, x].transform.position.y < 0.5f) {
             pieceBox[z, x].transform.position += new Vector3(0,Time.deltaTime*4.0f,0);
             yield return null;
@@ -297,8 +309,14 @@ public class MainCon : MonoBehaviour
             pieceBox[z, x].transform.position -= new Vector3(0, Time.deltaTime * 4.5f, 0);
             yield return null;
         }
+
+        if(stopCount == step.search){//ステップを進める
+            yield return 3;
+            stopCount = step.reverse;
+        }
     }
 
+    //ゲーム終了、リザルト
     private void GameEnd()
     {
         if (countB > countW) {
