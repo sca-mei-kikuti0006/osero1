@@ -52,7 +52,8 @@ public class MainCon : MonoBehaviour
         free,//駒を置ける時
         put,//駒を置いた後
         search,//裏返す駒を調べた後
-        reverse//駒を裏返した後
+        reverse,//駒を裏返した後
+        turnc//ターン交代
     }
     private step stopCount = step.free;
 
@@ -90,18 +91,6 @@ public class MainCon : MonoBehaviour
     {
         if(stopCount == step.free) {
 
-            //お互い置ける場所がないときゲームが終わる
-            if (!canPut)
-            {
-                if (end == false){
-                    TurnChange();
-                    end = true;
-                }
-                else{
-                    GameEnd();
-                }
-            }
-
             //駒設置
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
@@ -117,14 +106,32 @@ public class MainCon : MonoBehaviour
                         pieceBox[z, x] = Instantiate(piece, new Vector3(hit.transform.position.x, 0.07f, hit.transform.position.z), Quaternion.Euler(0, 0, (int)turn));
                         piseBoard[z, x] = turn;
                         SearchReverse(z, x);
-                        end = false;
                     }
                 }
             }
         }
         else if(stopCount == step.reverse) {//裏返るアニメーションが終わったら
             TurnChange();//ターン交代
-            stopCount = step.free;
+        }
+        else if (stopCount == step.turnc)
+        {
+            //お互い置ける場所がないときゲームが終わる
+            if (!canPut)
+            {
+                if (end == false)
+                {
+                    TurnChange();
+                    end = true;
+                }
+                else
+                {
+                    GameEnd();
+                }
+            }
+            else {
+                TurnChangeUi();
+                stopCount = step.free;
+            }
         }
     }
 
@@ -151,6 +158,22 @@ public class MainCon : MonoBehaviour
 
         CountPiece();
         CanPut();
+    }
+
+    private void TurnChangeUi()
+    {
+        if (turn == turnBW.White)
+        {
+            CUi.GetComponent<Image>().color = new Color(255.0f, 255.0f, 255.0f);
+            CUi2.GetComponent<Image>().color = new Color(255.0f, 255.0f, 255.0f);
+
+        }
+        else if (turn == turnBW.Black)
+        {
+            CUi.GetComponent<Image>().color = new Color(0.0f, 0.0f, 0.0f, 255.0f);
+            CUi2.GetComponent<Image>().color = new Color(0.0f, 0.0f, 0.0f, 255.0f);
+        }
+
     }
 
     //今の駒の数
@@ -205,9 +228,12 @@ public class MainCon : MonoBehaviour
                 {
                     overBox[i, j] = Instantiate(show, new Vector3(j, 0.07f, -i), Quaternion.Euler(90.0f, 0, 0));
                     canPut = true;
+                    if (end) end = false;
                 }
             }
         }
+
+        stopCount = step.turnc;
     }
 
     //置けるか調べるまたは、実際裏返す場所をlistに入れる
@@ -300,8 +326,12 @@ public class MainCon : MonoBehaviour
         float ro = 0;
         while (ro < 180)
         {
-            pieceBox[z, x].transform.Rotate(new Vector3(0, 0, Time.deltaTime * 500.0f));
-            ro += Time.deltaTime * 500.0f;
+            float roTi = Time.deltaTime * 500.0f;
+            ro += roTi;
+            if (ro > 180) {
+                roTi -= ro - 180;
+            }
+            pieceBox[z, x].transform.Rotate(new Vector3(0, 0, roTi));
             yield return null;
         }
         while (pieceBox[z, x].transform.position.y > 0.07f)
