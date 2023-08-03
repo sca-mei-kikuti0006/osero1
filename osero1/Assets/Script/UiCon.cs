@@ -6,10 +6,12 @@ using UnityEngine.UI;
 public class UiCon : MonoBehaviour
 {
     //駒の数UI
+    [Header("駒の数")]
     [SerializeField] private Text countBText;
     [SerializeField] private Text countWText;
 
     //ターンの色UI
+    [Header("ターンの色")]
     [SerializeField] private Image turnC;
     [SerializeField] private Image turnC2;
     [SerializeField] private Image circleB;
@@ -18,10 +20,12 @@ public class UiCon : MonoBehaviour
     private Animator circleWAnim;
 
     //リザルト
+    [Header("リザルト")]
     [SerializeField] private GameObject resultCanvas;
     private Text resultText;
 
     //イベント
+    [Header("イベント")]
     [SerializeField] private GameObject eventCanvas;
     private Text calloutBText;
     private Text calloutWText;
@@ -103,7 +107,7 @@ public class UiCon : MonoBehaviour
     }
 
     //イベント
-    public void EventUi(int eventRan)
+    public void EventUi(MainCon2P.eventName eventRan)
     {
         GameObject eventCan = Instantiate(eventCanvas); 
 
@@ -117,15 +121,15 @@ public class UiCon : MonoBehaviour
         string evW = "";
         switch (eventRan)
         {
-            case 0:
+            case MainCon2P.eventName.Corner:
                 evB = "四隅の駒は\n排除～";
                 evW = "角の駒は\n没収！";
                 break;
-            case 1:
+            case MainCon2P.eventName.Change:
                 evB = "置いた駒が\n逆になる～";
                 evW = "逆転！";
                 break;
-            case 2:
+            case MainCon2P.eventName.Site:
                 evB = "キラキラな\nとこに置くと\n得点＋３～";
                 evW = "キラキラな\nとこに置くと\nポイント＋３！";
                 break;

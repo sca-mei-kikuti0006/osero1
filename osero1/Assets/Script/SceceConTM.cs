@@ -19,6 +19,6 @@ public class SceceConTM : MonoBehaviour
 
     public void OnButton()
     {
-        SceneManager.LoadScene("MainScene");
+        SceneManager.LoadScene("Main2PScene");
     }
 }
