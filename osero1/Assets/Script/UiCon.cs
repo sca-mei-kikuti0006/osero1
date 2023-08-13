@@ -107,7 +107,7 @@ public class UiCon : MonoBehaviour
     }
 
     //ƒCƒxƒ“ƒg
-    public void EventUi(MainCon2P.eventName eventRan)
+    public void EventUi(MainCon.eventName eventRan)
     {
         GameObject eventCan = Instantiate(eventCanvas); 
 
@@ -121,15 +121,15 @@ public class UiCon : MonoBehaviour
         string evW = "";
         switch (eventRan)
         {
-            case MainCon2P.eventName.Corner:
+            case MainCon.eventName.Corner:
                 evB = "l‹÷‚Ì‹î‚Í\n”rœ`";
                 evW = "Šp‚Ì‹î‚Í\n–vûI";
                 break;
-            case MainCon2P.eventName.Change:
+            case MainCon.eventName.Change:
                 evB = "’u‚¢‚½‹î‚ª\n‹t‚É‚È‚é`";
                 evW = "‹t“]I";
                 break;
-            case MainCon2P.eventName.Site:
+            case MainCon.eventName.Site:
                 evB = "ƒLƒ‰ƒLƒ‰‚È\n‚Æ‚±‚É’u‚­‚Æ\n“¾“_{‚R`";
                 evW = "ƒLƒ‰ƒLƒ‰‚È\n‚Æ‚±‚É’u‚­‚Æ\nƒ|ƒCƒ“ƒg{‚RI";
                 break;
